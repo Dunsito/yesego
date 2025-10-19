@@ -12,7 +12,9 @@ from commands import (
     setup_paypal_charge_command,
     setup_sites_commands,
     setup_remove_sites_command,
-    setup_mass_sh_check_command 
+    setup_mass_sh_check_command,
+    setup_broadcast_command,
+    setup_mass_b3_check_command
 )
 
 def main():
@@ -30,6 +32,8 @@ def main():
     setup_sites_commands(bot)
     setup_remove_sites_command(bot)  # ← NUEVA LÍNEA
     setup_mass_sh_check_command(bot)
+    setup_broadcast_command(bot)
+    setup_mass_b3_check_command(bot)
     
     print("✅ Bot en ejecución... Comandos cargados: /start, /gen, /st, /ms, /vbv, /b3, /pp, /site, /sites, /sh, /rm")
     bot.polling(non_stop=True)

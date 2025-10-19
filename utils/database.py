@@ -2,6 +2,7 @@
 import json
 import os
 import datetime
+from datetime import timedelta
 from config import DATA_FILE, ADMIN_ID
 
 def load_data():
@@ -32,21 +33,107 @@ def get_plan(user_id, credits):
     if user_id == ADMIN_ID:
         return "👑 Owner"
     elif user_data.get("premium", False):
-        return "💎 Premium User"
+        # Verificar si el premium no ha expirado
+        expire_str = user_data.get("premium_expire")
+        if expire_str:
+            try:
+                expire_date = datetime.datetime.strptime(expire_str, "%Y-%m-%d %H:%M:%S")
+                if datetime.datetime.now() < expire_date:
+                    days_left = (expire_date - datetime.datetime.now()).days
+                    return f"💎 Premium ({days_left}d)"
+                else:
+                    # Premium expirado
+                    user_data["premium"] = False
+                    user_data.pop("premium_expire", None)
+                    save_data(data)
+                    return "🧊 Free User"
+            except:
+                return "💎 Premium"
+        return "💎 Premium"
     else:
         return "🧊 Free User"
 
-def set_premium(user_id, is_premium):
+def set_premium(user_id, days):
+    """Establece premium por X días"""
     data = load_data()
     if str(user_id) not in data:
         data[str(user_id)] = {}
-    data[str(user_id)]["premium"] = is_premium
+    
+    if days > 0:
+        # Calcular fecha de expiración
+        expire_date = datetime.datetime.now() + timedelta(days=days)
+        data[str(user_id)]["premium"] = True
+        data[str(user_id)]["premium_expire"] = expire_date.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        # Remover premium
+        data[str(user_id)]["premium"] = False
+        data[str(user_id)].pop("premium_expire", None)
+    
     save_data(data)
 
 def is_premium(user_id):
+    """Verifica si el usuario es premium (incluyendo expiración)"""
     data = load_data()
     user_data = data.get(str(user_id), {})
-    return user_data.get("premium", False) or user_id == ADMIN_ID
+    
+    # Owner siempre es premium
+    if user_id == ADMIN_ID:
+        return True
+    
+    # Verificar si tiene premium y no ha expirado
+    if user_data.get("premium", False):
+        expire_str = user_data.get("premium_expire")
+        if expire_str:
+            try:
+                expire_date = datetime.datetime.strptime(expire_str, "%Y-%m-%d %H:%M:%S")
+                if datetime.datetime.now() < expire_date:
+                    return True
+                else:
+                    # Premium expirado - removerlo
+                    user_data["premium"] = False
+                    user_data.pop("premium_expire", None)
+                    save_data(data)
+                    return False
+            except:
+                # Si hay error en la fecha, mantener premium
+                return True
+        return True
+    
+    return False
+
+def get_premium_info(user_id):
+    """Obtiene información del premium del usuario"""
+    data = load_data()
+    user_data = data.get(str(user_id), {})
+    
+    if user_id == ADMIN_ID:
+        return {"is_premium": True, "expire_date": "PERMANENTE", "days_left": "∞"}
+    
+    if user_data.get("premium", False):
+        expire_str = user_data.get("premium_expire")
+        if expire_str:
+            try:
+                expire_date = datetime.datetime.strptime(expire_str, "%Y-%m-%d %H:%M:%S")
+                now = datetime.datetime.now()
+                if now < expire_date:
+                    days_left = (expire_date - now).days
+                    return {
+                        "is_premium": True, 
+                        "expire_date": expire_date.strftime("%Y-%m-%d"),
+                        "days_left": days_left
+                    }
+                else:
+                    # Premium expirado
+                    user_data["premium"] = False
+                    user_data.pop("premium_expire", None)
+                    save_data(data)
+                    return {"is_premium": False, "expire_date": "EXPIRADO", "days_left": 0}
+            except:
+                return {"is_premium": True, "expire_date": "DESCONOCIDO", "days_left": "?"}
+        
+        return {"is_premium": True, "expire_date": "PERMANENTE", "days_left": "∞"}
+    
+    return {"is_premium": False, "expire_date": "NO PREMIUM", "days_left": 0}
 
 def get_daily_usage(user_id):
     """Obtiene el uso diario del usuario"""
@@ -94,6 +181,6 @@ def can_use_free_command(user_id):
         return True, "∞"
     
     daily_usage = get_daily_usage(user_id)
-    remaining = max(0, 30 - daily_usage)  # ← CAMBIADO de 50 a 30
+    remaining = max(0, 30 - daily_usage)
     
     return remaining > 0, remaining

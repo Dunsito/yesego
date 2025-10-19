@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.database import get_credits, set_credits, get_plan, is_premium, load_data, save_data
 from utils.bin_database import get_bin_info
+from config import ADMIN_ID
 
 # LISTA DE PROXYS ALEATORIOS
 PROXY_LIST = [
@@ -25,23 +26,23 @@ def setup_mass_sh_check_command(bot):
         process_mass_sh_check(bot, message)
 
 def process_mass_sh_check(bot, message):
-    """Maneja el mass check con /msh - Solo para usuarios premium"""
+    """Maneja el mass check con /msh - Solo para usuarios premium y Owner"""
     user_id = message.from_user.id
     username = message.from_user.first_name
     
     print(f"🔹 [MSH] Comando /msh recibido de {username} (ID: {user_id})")
     
-    # Verificar si es Premium User
-    if not is_premium(user_id):
+    # Verificar si es Premium User o Owner
+    if not is_premium(user_id) and user_id != ADMIN_ID:
         print(f"🔹 [MSH] Usuario {username} NO es premium - Rechazando comando")
         bot.reply_to(message, "❌ Comando solo para usuarios premium.\n@Dunxito para adquirir tu plan.")
         return
     
-    # Verificar créditos
+    # Verificar créditos (excepto para Owner)
     credits = get_credits(user_id)
     print(f"🔹 [MSH] Usuario {username} - Créditos disponibles: {credits}")
     
-    if credits <= 0:
+    if credits <= 0 and user_id != ADMIN_ID:
         print(f"🔹 [MSH] Usuario {username} - Créditos insuficientes")
         bot.reply_to(message, "❌ Créditos insuficientes.")
         return
@@ -56,35 +57,43 @@ def process_mass_sh_check(bot, message):
         print(f"🔹 [MSH] Texto del comando de {username}: '{command_text}'")
         
         if not command_text:
-            print(f"🔹 [MSH] Usuario {username} - Comando sin parámetros")
-            bot.reply_to(message, "⚠️ Uso: `/msh <lista_de_tarjetas>`\nEjemplo: `/msh 4282104033002891|11|29|500 5104886655308541|09|29|094`\n\n📊 **Límites:**\n• Mínimo: 2 tarjetas\n• Máximo: 25 tarjetas\n• **Recomendado:** No más de 5 para evitar sobrecarga de proxies\n\n💳 **Costos:**\n• CHARGED: 2 créditos\n• 3D CC: 1 crédito\n• Otros DECLINED: 0 créditos", parse_mode="Markdown")
+            if user_id == ADMIN_ID:
+                bot.reply_to(message, "⚠️ Uso: `/msh <lista_de_tarjetas>`\nEjemplo: `/msh 4282104033002891|11|29|500 5104886655308541|09|29|094`\n\n📊 **Límites:**\n• 👑 Owner: Sin límites de tarjetas\n• 👑 Owner: Sin límites de sitios\n\n💳 **Costos:**\n• CHARGED: 2 créditos\n• 3D CC: 1 crédito\n• Owner: Sin costo", parse_mode="Markdown")
+            else:
+                bot.reply_to(message, "⚠️ Uso: `/msh <lista_de_tarjetas>`\nEjemplo: `/msh 4282104033002891|11|29|500 5104886655308541|09|29|094`\n\n📊 **Límites:**\n• Mínimo: 2 tarjetas\n• Máximo: 25 tarjetas\n• **Recomendado:** No más de 5 para evitar sobrecarga\n\n💳 **Costos:**\n• CHARGED: 2 créditos\n• 3D CC: 1 crédito\n• Otros DECLINED: 0 créditos", parse_mode="Markdown")
             return
         
         # Dividir las tarjetas (separadas por espacios)
         cards = command_text.split()
         print(f"🔹 [MSH] Usuario {username} - Tarjetas encontradas: {len(cards)}")
         
-        # Validar mínimo 2 tarjetas
-        if len(cards) < 2:
+        # Validar mínimo 2 tarjetas (excepto Owner)
+        if len(cards) < 2 and user_id != ADMIN_ID:
             print(f"🔹 [MSH] Usuario {username} - Mínimo de tarjetas no alcanzado")
             bot.reply_to(message, "❌ Se necesitan 2 tarjetas como mínimo.", parse_mode="Markdown")
             return
         
-        # Limitar a 25 tarjetas máximo
-        if len(cards) > 25:
+        # Limitar a 25 tarjetas máximo (excepto Owner)
+        if len(cards) > 25 and user_id != ADMIN_ID:
             original_count = len(cards)
             cards = cards[:25]
             print(f"🔹 [MSH] Usuario {username} - Limité de {original_count} a 25 tarjetas")
             bot.reply_to(message, f"⚠️ Se procesarán solo las primeras 25 tarjetas de las {original_count} enviadas")
         
-        # Advertencia si son más de 5 tarjetas
-        if len(cards) > 5:
+        # Advertencia si son más de 5 tarjetas (solo para usuarios normales)
+        if len(cards) > 5 and user_id != ADMIN_ID:
             print(f"🔹 [MSH] Usuario {username} - Advertencia: {len(cards)} tarjetas (más de 5)")
-            bot.reply_to(message, f"Enviar mas de 8 tarjetas puede hacer el proceso mas lento\n🔄 Procesando...")
+            bot.reply_to(message, f"⚠️ **Advertencia:** Has enviado {len(cards)} tarjetas.\n💡 **Recomendación:** Para mejor performance, usa máximo 5 tarjetas por comando.\n🔄 Procesando...")
         
         # Obtener sitios del usuario
         user_sites = get_user_sites(user_id)
-        if not user_sites:
+        
+        # Si es Owner y no tiene sitios, usar sitios por defecto
+        if user_id == ADMIN_ID and not user_sites:
+            user_sites = ["shopify.com", "stripe.com", "paypal.com", "example.com", "test.com"]
+            print(f"🔹 [MSH] Owner - Usando sitios por defecto: {user_sites}")
+        
+        if not user_sites and user_id != ADMIN_ID:
             print(f"🔹 [MSH] Usuario {username} - No tiene sitios configurados")
             bot.reply_to(message, "❌ No tienes sitios configurados.\nUsa `/site tupagina.com` para agregar sitios primero.")
             return
@@ -95,15 +104,19 @@ def process_mass_sh_check(bot, message):
         max_possible_cost = len(cards) * 2
         print(f"🔹 [MSH] Usuario {username} - Costo máximo posible: {max_possible_cost} créditos")
         
-        # Verificar si tiene créditos suficientes para el peor caso
-        if credits < max_possible_cost:
+        # Verificar si tiene créditos suficientes para el peor caso (excepto Owner)
+        if credits < max_possible_cost and user_id != ADMIN_ID:
             print(f"🔹 [MSH] Usuario {username} - Créditos insuficientes para máximo costo")
             bot.reply_to(message, f"❌ Créditos insuficientes. Necesitas al menos {max_possible_cost} créditos para procesar {len(cards)} tarjetas (máximo 2 créditos por CHARGED)")
             return
         
         # Enviar mensaje de procesamiento
         print(f"🔹 [MSH] Usuario {username} - Iniciando procesamiento de {len(cards)} tarjetas")
-        processing_msg = bot.reply_to(message, f"🔄 Procesando {len(cards)} tarjetas en {len(user_sites)} sitios...\n⏳ Esto puede tomar unos segundos...\n💳 Créditos disponibles: {credits}\n💡 **Nota:** Usar muchas tarjetas puede ralentizar el proceso")
+        
+        if user_id == ADMIN_ID:
+            processing_msg = bot.reply_to(message, f"👑 **Owner Mode**\n🔄 Procesando {len(cards)} tarjetas en {len(user_sites)} sitios...\n⏳ Esto puede tomar unos segundos...\n💳 Créditos: Ilimitados")
+        else:
+            processing_msg = bot.reply_to(message, f"🔄 Procesando {len(cards)} tarjetas en {len(user_sites)} sitios...\n⏳ Esto puede tomar unos segundos...\n💳 Créditos disponibles: {credits}\n💡 **Nota:** Usar muchas tarjetas puede ralentizar el proceso")
         
         # Procesar todas las tarjetas
         start_time = time.time()
@@ -126,30 +139,46 @@ def process_mass_sh_check(bot, message):
                 result, cost = process_single_sh_card(card_data, i, random_site)
                 results.append(result)
                 
-                # Contar tarjetas y calcular costo
-                if cost == 2:  # CHARGED
-                    charged_cards += 1
-                    total_cost += 2
-                    print(f"🔹 [MSH] Usuario {username} - Tarjeta {i} CHARGED (+2 créditos)")
-                elif cost == 1:  # 3D CC
-                    three_d_cc_cards += 1
-                    total_cost += 1
-                    print(f"🔹 [MSH] Usuario {username} - Tarjeta {i} 3D CC (+1 crédito)")
+                # Contar tarjetas y calcular costo (Owner no paga)
+                if user_id != ADMIN_ID:
+                    if cost == 2:  # CHARGED
+                        charged_cards += 1
+                        total_cost += 2
+                        print(f"🔹 [MSH] Usuario {username} - Tarjeta {i} CHARGED (+2 créditos)")
+                    elif cost == 1:  # 3D CC
+                        three_d_cc_cards += 1
+                        total_cost += 1
+                        print(f"🔹 [MSH] Usuario {username} - Tarjeta {i} 3D CC (+1 crédito)")
+                    else:
+                        print(f"🔹 [MSH] Usuario {username} - Tarjeta {i} DECLINED (0 créditos)")
                 else:
-                    print(f"🔹 [MSH] Usuario {username} - Tarjeta {i} DECLINED (0 créditos)")
+                    # Owner - solo contar pero no cobrar
+                    if cost == 2:
+                        charged_cards += 1
+                        print(f"🔹 [MSH] Owner - Tarjeta {i} CHARGED (0 créditos - Owner)")
+                    elif cost == 1:
+                        three_d_cc_cards += 1
+                        print(f"🔹 [MSH] Owner - Tarjeta {i} 3D CC (0 créditos - Owner)")
+                    else:
+                        print(f"🔹 [MSH] Owner - Tarjeta {i} DECLINED")
                 
                 print(f"🔹 [MSH] Usuario {username} - Costo acumulado: {total_cost} créditos")
                 
                 # Actualizar mensaje de progreso cada 3 tarjetas (o menos si son muchas)
                 update_interval = 3 if len(cards) <= 10 else 5
                 if i % update_interval == 0 or i == len(cards):
-                    progress_msg = f"🔄 Procesando {len(cards)} tarjetas...\n📊 Completado: {i}/{len(cards)}\n✅ Charged: {charged_cards} | 3D CC: {three_d_cc_cards}\n💳 Costo acumulado: {total_cost} créditos"
-                    if len(cards) > 10:
-                        progress_msg += f"\n🐢 Procesando {len(cards)} tarjetas (puede demorar)"
+                    if user_id == ADMIN_ID:
+                        progress_msg = f"👑 **Owner Mode**\n🔄 Procesando {len(cards)} tarjetas...\n📊 Completado: {i}/{len(cards)}\n✅ Charged: {charged_cards} | 3D CC: {three_d_cc_cards}\n💳 Costo: Ilimitado"
+                    else:
+                        progress_msg = f"🔄 Procesando {len(cards)} tarjetas...\n📊 Completado: {i}/{len(cards)}\n✅ Charged: {charged_cards} | 3D CC: {three_d_cc_cards}\n💳 Costo acumulado: {total_cost} créditos"
+                    
+                    if len(cards) > 10 and user_id != ADMIN_ID:
+                        progress_msg += f"\n🐢 Procesando {len(cards)} tarjetas (puede ser lento)"
+                    
                     bot.edit_message_text(progress_msg, message.chat.id, processing_msg.message_id)
                     print(f"🔹 [MSH] Usuario {username} - Progreso actualizado: {i}/{len(cards)}")
                 
-                # Pequeña pausa para no sobrecargar los proxies
+                # Pequeña pausa para no sobrecargar los proxies (solo si son muchas tarjetas)
                 if len(cards) > 5:
                     time.sleep(0.3)
                 
@@ -158,14 +187,17 @@ def process_mass_sh_check(bot, message):
                 results.append(error_msg)
                 print(f"🔴 [MSH] ERROR Usuario {username} - Tarjeta {i}: {str(e)}")
         
-        # Restar créditos según los resultados
-        if total_cost > 0:
+        # Restar créditos según los resultados (excepto Owner)
+        if total_cost > 0 and user_id != ADMIN_ID:
             new_credits = credits - total_cost
             set_credits(user_id, new_credits)
             print(f"🔹 [MSH] Usuario {username} - Créditos restados: {total_cost}. Nuevo saldo: {new_credits}")
         else:
             new_credits = credits
-            print(f"🔹 [MSH] Usuario {username} - No se restaron créditos")
+            if user_id == ADMIN_ID:
+                print(f"🔹 [MSH] Owner - No se restaron créditos")
+            else:
+                print(f"🔹 [MSH] Usuario {username} - No se restaron créditos")
         
         end_time = time.time()
         total_time = round(end_time - start_time, 2)
@@ -180,26 +212,48 @@ def process_mass_sh_check(bot, message):
         results_text = "\n".join(results)
         
         # Crear respuesta final
-        response_text = f"""
+        if user_id == ADMIN_ID:
+            response_text = f"""
 - - - - - - - - - - - - - - - - - - - - -
- Mass Shop Check
+ Mass Shop Check - 👑 OWNER MODE
 - - - - - - - - - - - - - - - - - - - - - 
-𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ➙ Shopify
+𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ➙ Shopify/Stripe (Multi-Site)
 - - - - - - - - - - - - - - - - - - - - - 
 
 {results_text}
 
 - - - - - - - - - - - - - - - - - - - - -
 🝮 Total : {len(cards)} tarjetas
+🝮 Charged : {charged_cards} tarjetas
+🝮 3D CC : {three_d_cc_cards} tarjetas
+🝮 Costo Total : 0 créditos (Owner)
+🝮 Time : {total_time}s
+🝮 Credits Left : {new_credits}
+🝮 Checked by : {username} [{plan}]
+"""
+        else:
+            response_text = f"""
+- - - - - - - - - - - - - - - - - - - - -
+ Mass Shop Check
+- - - - - - - - - - - - - - - - - - - - - 
+𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ➙ Shopify/Stripe (Multi-Site)
+- - - - - - - - - - - - - - - - - - - - - 
+
+{results_text}
+
+- - - - - - - - - - - - - - - - - - - - -
+🝮 Total : {len(cards)} tarjetas
+🝮 Charged : {charged_cards} tarjetas (2 créditos c/u)
+🝮 3D CC : {three_d_cc_cards} tarjetas (1 crédito c/u)
 🝮 Costo Total : {total_cost} créditos
 🝮 Time : {total_time}s
 🝮 Credits Left : {new_credits}
 🝮 Checked by : {username} [{plan}]
 """
         
-        # Añadir recomendación si usó muchas tarjetas
-        if len(cards) > 5:
-            response_text += f"\nRecomendacion: usen entre 5-7 tarjetas para no acabar el proxy."
+        # Añadir recomendación si usó muchas tarjetas (solo usuarios normales)
+        if len(cards) > 5 and user_id != ADMIN_ID:
+            response_text += f"\n💡 **Recomendación:** Para mejor performance, usa máximo 5 tarjetas por comando"
         
         print(f"🔹 [MSH] Usuario {username} - Enviando respuesta final...")
         print(f"🔹 [MSH] RESUMEN Usuario {username}: {len(cards)} tarjetas, {charged_cards} CHARGED, {three_d_cc_cards} 3D CC, Costo: {total_cost}, Tiempo: {total_time}s")
@@ -273,7 +327,7 @@ def process_single_sh_card(card_data, card_number, site):
         if status == 'CHARGED':
             cost = 2
         elif '3D CC' in result['message']:
-            cost = 0
+            cost = 1
         # Para DECLINED y otros, costo = 0
         
         # Obtener información del BIN

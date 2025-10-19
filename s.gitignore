@@ -1,4 +1,1 @@
-# .gitignore
-__pycache__/
-*.pyc
-data.json  # si no quieres subir tu base de datos
+data.json

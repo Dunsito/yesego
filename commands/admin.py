@@ -1,5 +1,5 @@
 # commands/admin.py
-from utils.database import get_credits, set_credits, set_premium, is_premium
+from utils.database import get_credits, set_credits, set_premium, is_premium, get_premium_info
 from config import ADMIN_ID
 
 def setup_admin_commands(bot):
@@ -35,21 +35,25 @@ def setup_admin_commands(bot):
 
         try:
             parts = message.text.split()
-            if len(parts) != 3:
-                bot.reply_to(message, "⚠️ Uso correcto: /setpremium <user_id> <true/false>")
+            if len(parts) != 4:
+                bot.reply_to(message, "⚠️ Uso: `/setpremium <user_id> <días> <on/off>`\nEjemplo: `/setpremium 123456789 30 on`\nEjemplo: `/setpremium 123456789 0 off`", parse_mode="Markdown")
                 return
                 
             user_id = int(parts[1])
-            premium_status = parts[2].lower()
+            days = int(parts[2])
+            premium_status = parts[3].lower()
             
-            if premium_status == "true":
-                set_premium(user_id, True)
-                bot.reply_to(message, f"✅ Usuario {user_id} ahora es Premium User.")
-            elif premium_status == "false":
-                set_premium(user_id, False)
+            if premium_status == "on":
+                set_premium(user_id, days)
+                if days == 0:
+                    bot.reply_to(message, f"✅ Usuario {user_id} ahora es Premium Permanente.")
+                else:
+                    bot.reply_to(message, f"✅ Usuario {user_id} ahora es Premium por {days} días.")
+            elif premium_status == "off":
+                set_premium(user_id, 0)  # Esto lo removerá inmediatamente
                 bot.reply_to(message, f"✅ Usuario {user_id} ahora es Free User.")
             else:
-                bot.reply_to(message, "❌ Valor inválido. Usa 'true' o 'false'.")
+                bot.reply_to(message, "❌ Valor inválido. Usa 'on' o 'off'.")
                 
         except Exception as e:
             bot.reply_to(message, f"❌ Error: {str(e)}")
@@ -64,13 +68,20 @@ def setup_admin_commands(bot):
         try:
             parts = message.text.split()
             if len(parts) != 2:
-                bot.reply_to(message, "⚠️ Uso correcto: /userinfo <user_id>")
+                bot.reply_to(message, "⚠️ Uso: `/userinfo <user_id>`", parse_mode="Markdown")
                 return
                 
             user_id = int(parts[1])
             credits = get_credits(user_id)
-            premium_status = is_premium(user_id)
-            plan = "💎 Premium" if premium_status else "🧊 Free"
+            premium_info = get_premium_info(user_id)
+            
+            if premium_info['is_premium']:
+                if premium_info['days_left'] == "∞":
+                    plan = "💎 Premium Permanente"
+                else:
+                    plan = f"💎 Premium ({premium_info['days_left']} días restantes)"
+            else:
+                plan = "🧊 Free User"
             
             info_text = f"""
 👤 **Información del Usuario**
@@ -78,7 +89,8 @@ def setup_admin_commands(bot):
 🆔 **ID:** `{user_id}`
 💎 **Plan:** {plan}
 💰 **Créditos:** {credits}
-🔓 **Premium:** {premium_status}
+📅 **Expira:** {premium_info['expire_date']}
+🔓 **Premium:** {premium_info['is_premium']}
             """
             
             bot.reply_to(message, info_text, parse_mode="Markdown")

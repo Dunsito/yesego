@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.database import get_credits, set_credits, get_plan, is_premium
 from utils.bin_database import get_bin_info
+from config import ADMIN_ID
 
 def setup_mass_check_command(bot):
     @bot.message_handler(commands=['ms'])
@@ -24,14 +25,14 @@ def process_mass_check(bot, message):
     user_id = message.from_user.id
     username = message.from_user.first_name
     
-    # Verificar si es Premium User
-    if not is_premium(user_id):
+    # Verificar si es Premium User o Owner
+    if not is_premium(user_id) and user_id != ADMIN_ID:
         bot.reply_to(message, "❌ Comando solo para usuarios premium.\n@Dunxito para adquirir tu plan.")
         return
     
-    # Verificar créditos
+    # Verificar créditos (excepto para Owner)
     credits = get_credits(user_id)
-    if credits <= 0:
+    if credits <= 0 and user_id != ADMIN_ID:
         bot.reply_to(message, "❌ Créditos insuficientes.")
         return
     
@@ -47,20 +48,23 @@ def process_mass_check(bot, message):
         print(f"🔹 Texto del comando: '{command_text}'")
         
         if not command_text:
-            bot.reply_to(message, "⚠️ Uso: `/ms <lista_de_tarjetas>`\nEjemplo: `/ms 4282104033002891|11|29|500 5104886655308541|09|29|094`\nMínimo: 2 tarjetas\nMáximo: 25 tarjetas\nCosto: 2 créditos por tarjeta APPROVED", parse_mode="Markdown")
+            if user_id == ADMIN_ID:
+                bot.reply_to(message, "⚠️ Uso: `/ms <lista_de_tarjetas>`\nEjemplo: `/ms 4282104033002891|11|29|500 5104886655308541|09|29|094`\n\n📊 **Límites:**\n• Free/Premium: 25 tarjetas máximo\n• 👑 Owner: Sin límites\n\n💳 **Costos:**\n• 2 créditos por tarjeta APPROVED", parse_mode="Markdown")
+            else:
+                bot.reply_to(message, "⚠️ Uso: `/ms <lista_de_tarjetas>`\nEjemplo: `/ms 4282104033002891|11|29|500 5104886655308541|09|29|094`\n\n📊 **Límites:**\n• Mínimo: 2 tarjetas\n• Máximo: 25 tarjetas\n\n💳 **Costos:**\n• 2 créditos por tarjeta APPROVED", parse_mode="Markdown")
             return
         
         # Dividir las tarjetas (separadas por espacios)
         cards = command_text.split()
         print(f"🔹 Tarjetas encontradas: {len(cards)}")
         
-        # Validar mínimo 2 tarjetas
-        if len(cards) < 2:
+        # Validar mínimo 2 tarjetas (excepto Owner)
+        if len(cards) < 2 and user_id != ADMIN_ID:
             bot.reply_to(message, "❌ Se necesitan 2 tarjetas como minimo.", parse_mode="Markdown")
             return
         
-        # Limitar a 25 tarjetas máximo
-        if len(cards) > 25:
+        # Limitar a 25 tarjetas máximo (excepto Owner)
+        if len(cards) > 25 and user_id != ADMIN_ID:
             cards = cards[:25]
             bot.reply_to(message, f"⚠️ Se procesarán solo las primeras 25 tarjetas de las {len(cards)} enviadas")
         
@@ -68,14 +72,16 @@ def process_mass_check(bot, message):
         max_possible_cost = len(cards) * 2
         print(f"🔹 Costo máximo posible: {max_possible_cost} créditos")
         
-        # Verificar si tiene créditos suficientes para el peor caso
-        if credits < max_possible_cost:
+        # Verificar si tiene créditos suficientes para el peor caso (excepto Owner)
+        if credits < max_possible_cost and user_id != ADMIN_ID:
             bot.reply_to(message, f"❌ Créditos insuficientes. Necesitas al menos {max_possible_cost} créditos para procesar {len(cards)} tarjetas (2 créditos por cada APPROVED)")
             return
         
-        # Enviar mensaje de procesamiento
-        print("🔹 Enviando mensaje de procesamiento...")
-        processing_msg = bot.reply_to(message, f"🔄 Procesando {len(cards)} tarjetas...\n⏳ Esto puede tomar unos segundos...\n💳 Créditos disponibles: {credits}")
+        # Mensaje de procesamiento diferente para Owner
+        if user_id == ADMIN_ID:
+            processing_msg = bot.reply_to(message, f"👑 **Owner Mode**\n🔄 Procesando {len(cards)} tarjetas...\n⏳ Esto puede tomar unos segundos...\n💳 Créditos: Ilimitados")
+        else:
+            processing_msg = bot.reply_to(message, f"🔄 Procesando {len(cards)} tarjetas...\n⏳ Esto puede tomar unos segundos...\n💳 Créditos disponibles: {credits}")
         
         # Procesar todas las tarjetas
         start_time = time.time()
@@ -107,14 +113,17 @@ def process_mass_check(bot, message):
                 results.append(error_msg)
                 print(f"🔴 {error_msg}")
         
-        # Restar créditos solo por las tarjetas APPROVED
-        if total_cost > 0:
+        # Restar créditos solo por las tarjetas APPROVED (excepto Owner)
+        if total_cost > 0 and user_id != ADMIN_ID:
             new_credits = credits - total_cost
             set_credits(user_id, new_credits)
             print(f"🔹 Créditos restados: {total_cost}. Nuevo saldo: {new_credits}")
         else:
             new_credits = credits
-            print("🔹 No se restaron créditos (ninguna tarjeta APPROVED)")
+            if user_id == ADMIN_ID:
+                print(f"🔹 Owner - No se restaron créditos")
+            else:
+                print("🔹 No se restaron créditos (ninguna tarjeta APPROVED)")
         
         end_time = time.time()
         total_time = round(end_time - start_time, 2)
@@ -266,6 +275,7 @@ def get_status_from_response(response):
             return "UNKNOWN 🔄"
             
     except:
+        # Si no es JSON, buscar palabras clave en el texto
         if not response:
             return "NO RESPONSE"
         elif "approved" in response.lower():

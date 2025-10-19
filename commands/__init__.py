@@ -1,3 +1,4 @@
+# commands/__init__.py
 from .start import setup_start_command
 from .admin import setup_admin_commands
 from .callback_handler import setup_callbacks
@@ -9,7 +10,9 @@ from .braintree_ccn import setup_braintree_ccn_command
 from .paypal_charge import setup_paypal_charge_command
 from .shop.sites_manager import setup_sites_commands
 from .shop.remove_sites import setup_remove_sites_command
-from .shop.mass_sh_check import setup_mass_sh_check_command  # ← NUEVO
+from .shop.mass_sh_check import setup_mass_sh_check_command
+from .broadcast import setup_broadcast_command
+from .mass_b3_check import setup_mass_b3_check_command
 
 __all__ = [
     'setup_start_command', 
@@ -23,5 +26,7 @@ __all__ = [
     'setup_paypal_charge_command',
     'setup_sites_commands',
     'setup_remove_sites_command',
-    'setup_mass_sh_check_command'  # ← NUEVO
+    'setup_mass_sh_check_command',
+    'setup_broadcast_command',
+    'setup_mass_b3_check_command'
 ]
