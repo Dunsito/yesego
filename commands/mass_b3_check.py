@@ -133,14 +133,14 @@ def process_single_b3_card(card_data, card_number):
         
         response = requests.get(braintree_url, timeout=30).text
         
-        # Procesar respuesta
-        status = "DECLINED ❌"
+                # Procesar respuesta
+        status = "Declined"
         is_approved = False
         
         try:
             data = json.loads(response)
-            if data.get("status", "").lower() == "approved":
-                status = "APPROVED ✅"
+            if data.get("status", "").lower() == "approved" or "approved" in str(data.get("response", "")).lower():
+                status = "Approved"
                 is_approved = True
         except:
             if "approved" in response.lower():
@@ -148,7 +148,8 @@ def process_single_b3_card(card_data, card_number):
                 is_approved = True
         
         bin_info = get_bin_info(cc_number[:6])
-        result_text = f"🝮 {card_number}. {cc_number}|{expiry_month}|{expiry_year}|{cvv} | {status} | {bin_info['scheme']}"
+        status_clean = status.replace("✅", "").replace("❌", "").replace("🔄", "").replace("⚠️", "").strip()
+        result_text = f"🝮 {card_number}. {cc_number}|{expiry_month}|{expiry_year}|{cvv} | {status_clean} | {bin_info['scheme']}"
         
         return result_text, is_approved
     

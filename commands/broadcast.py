@@ -36,7 +36,7 @@ def setup_broadcast_command(bot):
             # Enviar mensaje a cada usuario
             for user_id in user_ids:
                 try:
-                    bot.send_message(user_id, f"📢 **ANUNCIO IMPORTANTE**\n\n{broadcast_text}\n\n_Enviado por el equipo del bot_", parse_mode="Markdown")
+                    bot.send_message(user_id, f"{broadcast_text}", parse_mode="Markdown")
                     success_count += 1
                 except Exception as e:
                     fail_count += 1
