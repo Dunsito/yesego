@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.database import get_credits, set_credits, get_plan, is_premium
 from utils.bin_database import get_bin_info
 from config import ADMIN_ID
+from config import get_random_proxy
 
 def setup_paypal_charge_command(bot):
     @bot.message_handler(commands=['pp'])
@@ -80,6 +81,7 @@ def process_paypal_charge(bot, message):
         processing_msg = bot.reply_to(message, "🔄 Procesando PayPal 1$ Charge...\n⏳ Esto puede tomar hasta 40 segundos...")
         
         # URL para PayPal Charge
+        proxy = get_random_proxy()
         paypal_url = f"https://paypal-0mqq.onrender.com/charge/test/{cc_number}|{expiry_month}|{formatted_year}|{cvv}"
         
         # Hacer la solicitud con timeout de 40 segundos

